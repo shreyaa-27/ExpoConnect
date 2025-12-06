@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ExpoGuide - Your Digital Expo Companion</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Mode Toggle -->
+    <div class="mode-toggle-container">
+        <div class="mode-toggle">
+            <button class="mode-btn active" data-mode="user" id="userModeBtn">
+                <span class="mode-icon">👤</span>
+                <span>User Mode</span>
+            </button>
+            <button class="mode-btn" data-mode="owner" id="ownerModeBtn">
+                <span class="mode-icon">🏪</span>
+                <span>Owner Mode</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- User Mode Content -->
+    <div class="mode-content active" id="userMode">
+        <!-- Hero Section -->
+        <section class="hero-section">
+            <div class="hero-background"></div>
+            <div class="hero-content">
+                <h1 class="hero-title">
+                    <span class="gradient-text">Find Your Perfect</span>
+                    <span class="gradient-text">Expo Experience.</span>
+                </h1>
+                <p class="hero-subtitle">Tell us what you love — we show you the stalls meant for you.</p>
+                <div class="hero-illustration">
+                    <div class="floating-card card-1"></div>
+                    <div class="floating-card card-2"></div>
+                    <div class="floating-card card-3"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Interests Selection -->
+        <section class="interests-section">
+            <div class="container">
+                <h2 class="section-title">Select Your Interests</h2>
+                <div class="interests-grid" id="interestsGrid">
+                    <button class="interest-tag" data-interest="ai-robotics">AI & Robotics</button>
+                    <button class="interest-tag" data-interest="food-beverages">Food & Beverages</button>
+                    <button class="interest-tag" data-interest="health-wellness">Health & Wellness</button>
+                    <button class="interest-tag" data-interest="technology">Technology</button>
+                    <button class="interest-tag" data-interest="startups">Startups</button>
+                    <button class="interest-tag" data-interest="manufacturing">Manufacturing</button>
+                    <button class="interest-tag" data-interest="education">Education</button>
+                    <button class="interest-tag" data-interest="finance-fintech">Finance & FinTech</button>
+                    <button class="interest-tag" data-interest="art-design">Art & Design</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Heat Map Section -->
+        <section class="heatmap-section">
+            <div class="container">
+                <h2 class="section-title">Expo Hall Heat Map</h2>
+                <p class="heatmap-subtitle">See which stalls are trending and popular right now</p>
+                <div class="heatmap-container" id="heatmapContainer">
+                    <!-- Heat map will be dynamically generated -->
+                </div>
+                <div class="heatmap-legend">
+                    <div class="legend-item">
+                        <div class="legend-color high"></div>
+                        <span>Very Popular</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color medium"></div>
+                        <span>Popular</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color low"></div>
+                        <span>Moderate</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color very-low"></div>
+                        <span>Quiet</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Recommended Stalls -->
+        <section class="stalls-section">
+            <div class="container">
+                <div class="stalls-header">
+                    <h2 class="section-title">Recommended Stalls</h2>
+                    <div class="sort-controls">
+                        <button class="sort-btn active" data-sort="relevance">Relevance</button>
+                        <button class="sort-btn" data-sort="popularity">Most Popular</button>
+                    </div>
+                </div>
+                <div class="stalls-grid" id="stallsGrid">
+                    <!-- Stalls will be dynamically generated -->
+                </div>
+            </div>
+        </section>
+
+        <!-- QR Scan Section -->
+        <section class="qr-section">
+            <div class="container">
+                <h2 class="section-title">Scan a Stall QR</h2>
+                <div class="qr-container">
+                    <div class="qr-code-box">
+                        <div class="qr-placeholder">
+                            <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                                <rect width="200" height="200" fill="#fff"/>
+                                <rect x="20" y="20" width="40" height="40" fill="#000"/>
+                                <rect x="80" y="20" width="20" height="20" fill="#000"/>
+                                <rect x="140" y="20" width="40" height="40" fill="#000"/>
+                                <rect x="20" y="80" width="20" height="20" fill="#000"/>
+                                <rect x="60" y="80" width="20" height="20" fill="#000"/>
+                                <rect x="100" y="80" width="20" height="20" fill="#000"/>
+                                <rect x="140" y="80" width="20" height="20" fill="#000"/>
+                                <rect x="20" y="140" width="40" height="40" fill="#000"/>
+                                <rect x="80" y="140" width="20" height="20" fill="#000"/>
+                                <rect x="140" y="140" width="40" height="40" fill="#000"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <button class="glow-button" id="scanQRBtn">Simulate QR Scan</button>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Owner Mode Content -->
+    <div class="mode-content" id="ownerMode">
+        <!-- Dashboard Header -->
+        <section class="dashboard-header">
+            <div class="container">
+                <h1 class="dashboard-title">
+                    <span class="neon-text">Your ExpoGuide Dashboard</span>
+                </h1>
+                <p class="dashboard-subtitle">Turn visitors into customers. Get real leads, track engagement, grow your business.</p>
+            </div>
+        </section>
+
+        <!-- Stats Overview -->
+        <section class="stats-section">
+            <div class="container">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">👥</div>
+                        <div class="stat-value" id="totalLeads">247</div>
+                        <div class="stat-label">Total Leads</div>
+                        <div class="stat-change positive">+23% this week</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">📧</div>
+                        <div class="stat-value" id="newLeads">42</div>
+                        <div class="stat-label">New Leads Today</div>
+                        <div class="stat-change positive">+8 from yesterday</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">⭐</div>
+                        <div class="stat-value" id="avgRating">4.8</div>
+                        <div class="stat-label">Average Rating</div>
+                        <div class="stat-change positive">From 156 reviews</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">🔥</div>
+                        <div class="stat-value" id="popularity">#3</div>
+                        <div class="stat-label">Most Popular</div>
+                        <div class="stat-change positive">In your category</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Value Proposition -->
+        <section class="value-section">
+            <div class="container">
+                <div class="value-card">
+                    <h2 class="value-title">Why ExpoGuide Works for You</h2>
+                    <div class="value-grid">
+                        <div class="value-item">
+                            <div class="value-icon">🎯</div>
+                            <h3>Targeted Leads</h3>
+                            <p>Only receive leads from visitors genuinely interested in your products. No spam, just quality connections.</p>
+                        </div>
+                        <div class="value-item">
+                            <div class="value-icon">📊</div>
+                            <h3>Real-Time Analytics</h3>
+                            <p>Track visitor engagement, popular times, and conversion rates. Make data-driven decisions.</p>
+                        </div>
+                        <div class="value-item">
+                            <div class="value-icon">💰</div>
+                            <h3>Proven ROI</h3>
+                            <p>Our stall owners see an average 340% increase in lead quality and 2.5x faster follow-up conversions.</p>
+                        </div>
+                        <div class="value-item">
+                            <div class="value-icon">🚀</div>
+                            <h3>Zero Setup Time</h3>
+                            <p>Get your QR code instantly. No technical knowledge needed. Start collecting leads in minutes.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- QR Code Box -->
+        <section class="owner-qr-section">
+            <div class="container">
+                <div class="qr-glow-box">
+                    <h3 class="qr-box-title">Your Stall QR Code</h3>
+                    <div class="qr-code-display">
+                        <div class="qr-placeholder">
+                            <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                                <rect width="200" height="200" fill="#fff"/>
+                                <rect x="20" y="20" width="40" height="40" fill="#000"/>
+                                <rect x="80" y="20" width="20" height="20" fill="#000"/>
+                                <rect x="140" y="20" width="40" height="40" fill="#000"/>
+                                <rect x="20" y="80" width="20" height="20" fill="#000"/>
+                                <rect x="60" y="80" width="20" height="20" fill="#000"/>
+                                <rect x="100" y="80" width="20" height="20" fill="#000"/>
+                                <rect x="140" y="80" width="20" height="20" fill="#000"/>
+                                <rect x="20" y="140" width="40" height="40" fill="#000"/>
+                                <rect x="80" y="140" width="20" height="20" fill="#000"/>
+                                <rect x="140" y="140" width="40" height="40" fill="#000"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <p class="qr-instruction">Display this QR code at your stall. Visitors scan to instantly share their details with you.</p>
+                    <button class="download-qr-btn">Download QR Code</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Recent Leads -->
+        <section class="leads-section">
+            <div class="container">
+                <div class="leads-header">
+                    <h2 class="section-title">Recent Leads</h2>
+                    <div class="leads-filter">
+                        <button class="filter-btn active" data-filter="all">All</button>
+                        <button class="filter-btn" data-filter="today">Today</button>
+                        <button class="filter-btn" data-filter="week">This Week</button>
+                    </div>
+                </div>
+                <div class="leads-table-container">
+                    <table class="leads-table">
+                        <thead>
+                            <tr>
+                                <th>Visitor Name</th>
+                                <th>Email</th>
+                                <th>Interests</th>
+                                <th>Time</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="leadsTableBody">
+                            <!-- Leads will be populated by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- Testimonials -->
+        <section class="testimonials-section">
+            <div class="container">
+                <h2 class="section-title">What Other Stall Owners Say</h2>
+                <div class="testimonials-grid">
+                    <div class="testimonial-card">
+                        <div class="testimonial-content">
+                            <p>"ExpoGuide transformed our expo experience. We got 180 qualified leads in just 3 days!"</p>
+                        </div>
+                        <div class="testimonial-author">
+                            <div class="author-avatar">MK</div>
+                            <div class="author-info">
+                                <div class="author-name">Maria Kim</div>
+                                <div class="author-role">TechStart Solutions</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="testimonial-card">
+                        <div class="testimonial-content">
+                            <p>"Best investment we made. The lead quality is incredible and follow-ups are so much easier."</p>
+                        </div>
+                        <div class="testimonial-author">
+                            <div class="author-avatar">JR</div>
+                            <div class="author-info">
+                                <div class="author-name">James Rodriguez</div>
+                                <div class="author-role">HealthTech Innovations</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="testimonial-card">
+                        <div class="testimonial-content">
+                            <p>"ROI was visible within the first day. We closed 3 deals from ExpoGuide leads already!"</p>
+                        </div>
+                        <div class="testimonial-author">
+                            <div class="author-avatar">SC</div>
+                            <div class="author-info">
+                                <div class="author-name">Sarah Chen</div>
+                                <div class="author-role">FinTech Dynamics</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- QR Scan Modal -->
+    <div class="modal-overlay" id="qrModal">
+        <div class="modal-content">
+            <button class="modal-close" id="closeModal">&times;</button>
+            <h2 class="modal-title">Share Your Details</h2>
+            <form id="visitorForm">
+                <div class="form-group">
+                    <label for="visitorName">Your Name</label>
+                    <input type="text" id="visitorName" placeholder="Enter your name" required>
+                </div>
+                <div class="form-group">
+                    <label for="visitorEmail">Your Email</label>
+                    <input type="email" id="visitorEmail" placeholder="Enter your email" required>
+                </div>
+                <div class="form-group">
+                    <label>Your Selected Interests</label>
+                    <div class="selected-interests-display" id="selectedInterestsDisplay">
+                        <!-- Will be populated by JavaScript -->
+                    </div>
+                </div>
+                <button type="submit" class="submit-button">Share Details with Stall Owner</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Success Animation -->
+    <div class="success-overlay" id="successOverlay">
+        <div class="success-content">
+            <div class="success-icon">✓</div>
+            <h2 class="success-title">Details Shared Successfully!</h2>
+            <p class="success-message">The stall owner has received your information.</p>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
+
