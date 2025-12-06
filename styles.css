@@ -617,6 +617,7 @@ body {
 .stall-actions {
     display: flex;
     gap: 0.5rem;
+    flex-direction: column;
 }
 
 .upvote-btn {
@@ -653,6 +654,34 @@ body {
 
 .upvote-count {
     font-weight: 600;
+}
+
+.comment-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: rgba(59, 130, 246, 0.1);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    border-radius: 1rem;
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: inherit;
+    width: 100%;
+    justify-content: center;
+}
+
+.comment-btn:hover {
+    background: rgba(59, 130, 246, 0.2);
+    border-color: var(--primary-blue);
+    transform: translateY(-2px);
+}
+
+.comment-icon {
+    font-size: 1.1rem;
 }
 
 /* ============================================
