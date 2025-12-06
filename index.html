@@ -128,7 +128,20 @@
                             </svg>
                         </div>
                     </div>
-                    <button class="glow-button" id="scanQRBtn">Simulate QR Scan</button>
+                    <button class="glow-button" id="scanQRBtn">Scan QR Code</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Saved Leads Section -->
+        <section class="saved-leads-section">
+            <div class="container">
+                <h2 class="section-title">Saved Leads</h2>
+                <div class="saved-leads-grid" id="savedLeadsGrid">
+                    <!-- Saved leads will be populated by JavaScript -->
+                </div>
+                <div id="noSavedLeads" class="no-saved-leads" style="display: none;">
+                    <p>No saved leads yet. Scan QR codes and save them to see them here.</p>
                 </div>
             </div>
         </section>
@@ -216,19 +229,7 @@
                     <h3 class="qr-box-title">Your Stall QR Code</h3>
                     <div class="qr-code-display">
                         <div class="qr-placeholder">
-                            <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-                                <rect width="200" height="200" fill="#fff"/>
-                                <rect x="20" y="20" width="40" height="40" fill="#000"/>
-                                <rect x="80" y="20" width="20" height="20" fill="#000"/>
-                                <rect x="140" y="20" width="40" height="40" fill="#000"/>
-                                <rect x="20" y="80" width="20" height="20" fill="#000"/>
-                                <rect x="60" y="80" width="20" height="20" fill="#000"/>
-                                <rect x="100" y="80" width="20" height="20" fill="#000"/>
-                                <rect x="140" y="80" width="20" height="20" fill="#000"/>
-                                <rect x="20" y="140" width="40" height="40" fill="#000"/>
-                                <rect x="80" y="140" width="20" height="20" fill="#000"/>
-                                <rect x="140" y="140" width="40" height="40" fill="#000"/>
-                            </svg>
+                            <img src="QR.png" alt="QR Code">
                         </div>
                     </div>
                     <p class="qr-instruction">Display this QR code at your stall. Visitors scan to instantly share their details with you.</p>
@@ -347,6 +348,25 @@
         </div>
     </div>
 
+    <!-- Camera QR Scan Modal -->
+    <div class="modal-overlay" id="cameraModal">
+        <div class="modal-content camera-modal">
+            <button class="modal-close" id="closeCameraModal">&times;</button>
+            <h2 class="modal-title">Scan QR Code</h2>
+            <div class="camera-container">
+                <video id="video" autoplay playsinline></video>
+                <canvas id="canvas" style="display: none;"></canvas>
+                <div class="scan-line"></div>
+                <div class="scan-overlay">
+                    <div class="scan-frame"></div>
+                </div>
+            </div>
+            <p class="camera-instruction">Point your camera at the QR code</p>
+            <button class="glow-button" id="stopCameraBtn" style="display: none;">Stop Camera</button>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
     <script src="script.js"></script>
 </body>
 </html>
