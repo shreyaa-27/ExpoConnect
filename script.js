@@ -356,6 +356,10 @@ function createStallCard(stall) {
                     <span class="upvote-icon">👍</span>
                     <span class="upvote-count">${currentLikes}</span>
                 </button>
+                <button class="comment-btn" data-stall-id="${stall.id}" data-stall-name="${stall.name}">
+                    <span class="comment-icon">💬</span>
+                    <span>Comment</span>
+                </button>
             </div>
         </div>
     `;
@@ -385,6 +389,14 @@ function createStallCard(stall) {
         if (currentSort === 'popularity') {
             updateStallsDisplay();
         }
+    });
+    
+    // Add comment functionality
+    const commentBtn = card.querySelector('.comment-btn');
+    commentBtn.addEventListener('click', () => {
+        const stallId = parseInt(commentBtn.dataset.stallId);
+        const stallName = commentBtn.dataset.stallName;
+        openCommentModal(stallId, stallName);
     });
     
     return card;
@@ -1046,6 +1058,80 @@ function updateSavedLeadsDisplay() {
 document.addEventListener('DOMContentLoaded', () => {
     updateSavedLeadsDisplay();
 });
+
+// ============================================
+// COMMENT FUNCTIONALITY
+// ============================================
+
+function openCommentModal(stallId, stallName) {
+    // Create comment modal
+    const commentModal = document.createElement('div');
+    commentModal.id = 'commentModal';
+    commentModal.className = 'modal-overlay';
+    commentModal.innerHTML = `
+        <div class="modal-content" style="max-width: 500px;">
+            <button class="modal-close" id="closeCommentModal">&times;</button>
+            <h2 class="modal-title">Leave a Comment</h2>
+            <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">Share your thoughts about <strong>${stallName}</strong></p>
+            <form id="commentForm">
+                <div class="form-group">
+                    <label for="commentText" style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: var(--text-primary);">Your Comment</label>
+                    <textarea id="commentText" placeholder="Write your comment here..." required style="width: 100%; padding: 1rem; background: rgba(10, 10, 15, 0.6); border: 1px solid var(--card-border); border-radius: 0.75rem; color: var(--text-primary); font-size: 1rem; font-family: inherit; resize: vertical; min-height: 120px;"></textarea>
+                </div>
+                <button type="submit" class="glow-button" style="width: 100%; margin-top: 1rem;">Send Comment</button>
+            </form>
+        </div>
+    `;
+    document.body.appendChild(commentModal);
+    
+    // Show modal
+    setTimeout(() => {
+        commentModal.classList.add('active');
+    }, 10);
+    document.body.style.overflow = 'hidden';
+    
+    // Close button
+    document.getElementById('closeCommentModal').addEventListener('click', () => {
+        commentModal.remove();
+        document.body.style.overflow = '';
+    });
+    
+    // Close on overlay click
+    commentModal.addEventListener('click', (e) => {
+        if (e.target === commentModal) {
+            commentModal.remove();
+            document.body.style.overflow = '';
+        }
+    });
+    
+    // Handle form submission
+    document.getElementById('commentForm').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const commentText = document.getElementById('commentText').value.trim();
+        
+        if (commentText) {
+            // Store comment (you can extend this to send to owner mode)
+            const comment = {
+                stallId: stallId,
+                stallName: stallName,
+                comment: commentText,
+                timestamp: new Date().toISOString()
+            };
+            
+            // Store in localStorage
+            let comments = JSON.parse(localStorage.getItem('stallComments')) || [];
+            comments.push(comment);
+            localStorage.setItem('stallComments', JSON.stringify(comments));
+            
+            // Close modal
+            commentModal.remove();
+            document.body.style.overflow = '';
+            
+            // Show success message
+            showNotification('Comment sent to owner!', 'success');
+        }
+    });
+}
 
 function showCameraError() {
     // Create a subtle error notification (optional - can be removed if not needed)
