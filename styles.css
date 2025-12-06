@@ -1144,6 +1144,71 @@ body {
 }
 
 /* ============================================
+   COMMENTS SECTION (OWNER MODE)
+   ============================================ */
+
+.comments-section {
+    padding: 4rem 0;
+    background: linear-gradient(to bottom, transparent, rgba(139, 92, 246, 0.05));
+}
+
+.comments-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.comment-card {
+    background: var(--card-bg);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--card-border);
+    border-radius: 1.5rem;
+    padding: 2rem;
+    transition: all 0.3s ease;
+}
+
+.comment-card:hover {
+    transform: translateY(-3px);
+    border-color: var(--primary-purple);
+    box-shadow: 0 10px 40px rgba(139, 92, 246, 0.3);
+}
+
+.comment-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid rgba(139, 92, 246, 0.1);
+}
+
+.comment-business-name {
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.comment-date {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+.comment-text {
+    color: var(--text-secondary);
+    line-height: 1.6;
+    font-size: 1rem;
+    margin: 0;
+}
+
+.no-comments {
+    text-align: center;
+    padding: 3rem;
+    color: var(--text-secondary);
+    font-size: 1.1rem;
+}
+
+/* ============================================
    LEADS SECTION
    ============================================ */
 
