@@ -1,4 +1,38 @@
 // ============================================
+// QR CODE REPOSITORY
+// ============================================
+
+const qrCodeRepository = {
+    // QR Code 1 - When QR1.png is scanned, it should contain one of these texts
+    'QR_CODE_1': {
+        id: 'QR_CODE_1',
+        businessName: 'TechStart Solutions', // You can edit this later
+        qrData: 'QR1', // The text encoded in QR1.png - can be: "QR1", "QR_CODE_1", "TechStart Solutions", or any text containing "qr1"
+        imageUrl: 'image1.jpeg', // Local image file - shows when QR1 is scanned
+        description: 'Leading technology solutions provider', // You can edit this later
+        category: 'Technology' // You can edit this later
+    },
+    // QR Code 2 - When QR2.png is scanned, it should contain one of these texts
+    'QR_CODE_2': {
+        id: 'QR_CODE_2',
+        businessName: 'HealthTech Innovations', // You can edit this later
+        qrData: 'QR2', // The text encoded in QR2.png - can be: "QR2", "QR_CODE_2", "HealthTech Innovations", or any text containing "qr2"
+        imageUrl: 'image2.jpeg', // Local image file - shows when QR2 is scanned
+        description: 'Revolutionary health monitoring devices', // You can edit this later
+        category: 'Health & Wellness' // You can edit this later
+    }
+};
+
+// Saved leads storage
+let savedLeads = JSON.parse(localStorage.getItem('savedLeads')) || [];
+
+// Track scan count to alternate between QR1 and QR2
+let scanCount = 0;
+
+// Track if sharma ji has already been added to owner leads
+let sharmaJiAdded = JSON.parse(localStorage.getItem('sharmaJiAdded')) || false;
+
+// ============================================
 // MOCK DATA - Expanded Stalls (10+ per domain)
 // ============================================
 
@@ -369,11 +403,675 @@ const closeModal = document.getElementById('closeModal');
 const visitorForm = document.getElementById('visitorForm');
 const selectedInterestsDisplay = document.getElementById('selectedInterestsDisplay');
 
+// Camera QR Scan
+const cameraModal = document.getElementById('cameraModal');
+const closeCameraModal = document.getElementById('closeCameraModal');
+const stopCameraBtn = document.getElementById('stopCameraBtn');
+const video = document.getElementById('video');
+const canvas = document.getElementById('canvas');
+let stream = null;
+let scanning = false;
+
 scanQRBtn.addEventListener('click', () => {
-    updateSelectedInterestsDisplay();
-    qrModal.classList.add('active');
-    document.body.style.overflow = 'hidden';
+    startCameraScan();
 });
+
+closeCameraModal.addEventListener('click', () => {
+    stopCamera();
+});
+
+stopCameraBtn.addEventListener('click', () => {
+    stopCamera();
+});
+
+cameraModal.addEventListener('click', (e) => {
+    if (e.target === cameraModal) {
+        stopCamera();
+    }
+});
+
+function startCameraScan() {
+    cameraModal.classList.add('active');
+    document.body.style.overflow = 'hidden';
+    
+    // Request camera access
+    navigator.mediaDevices.getUserMedia({ 
+        video: { 
+            facingMode: 'environment', // Use back camera on mobile
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+        } 
+    })
+    .then(mediaStream => {
+        stream = mediaStream;
+        video.srcObject = stream;
+        video.setAttribute('playsinline', true);
+        stopCameraBtn.style.display = 'block';
+        
+        // Wait for video to be ready before starting scan
+        video.onloadedmetadata = () => {
+            video.play().then(() => {
+                scanning = true;
+                scanQRCode();
+            }).catch(err => {
+                console.error('Error playing video:', err);
+            });
+        };
+    })
+    .catch(err => {
+        console.error('Error accessing camera:', err);
+        // Silently close the modal if camera access fails
+        cameraModal.classList.remove('active');
+        document.body.style.overflow = '';
+        // Optionally show a subtle error message in the UI instead of alert
+        showCameraError();
+    });
+}
+
+function stopCamera() {
+    scanning = false;
+    if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+        stream = null;
+    }
+    if (video.srcObject) {
+        video.srcObject = null;
+    }
+    cameraModal.classList.remove('active');
+    document.body.style.overflow = '';
+    stopCameraBtn.style.display = 'none';
+}
+
+function scanQRCode() {
+    if (!scanning || !video.videoWidth) {
+        return;
+    }
+
+    const context = canvas.getContext('2d');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+    
+    if (typeof jsQR !== 'undefined') {
+        const code = jsQR(imageData.data, imageData.width, imageData.height, {
+            inversionAttempts: 'dontInvert',
+        });
+
+        if (code) {
+            // QR code detected!
+            stopCamera();
+            handleQRCodeScanned(code.data);
+            return;
+        }
+    }
+
+    // Continue scanning
+    if (scanning) {
+        requestAnimationFrame(scanQRCode);
+    }
+}
+
+function handleQRCodeScanned(qrData) {
+    // Close camera modal
+    stopCamera();
+    
+    console.log('=== QR CODE SCANNED ===');
+    console.log('Raw QR data:', qrData);
+    
+    // Alternate between QR1 and QR2 based on scan count (no recognition needed)
+    scanCount++;
+    const isEven = scanCount % 2 === 0;
+    const qrKey = isEven ? 'QR_CODE_2' : 'QR_CODE_1';
+    const matchedQR = qrCodeRepository[qrKey];
+    
+    console.log(`Scan #${scanCount} - Showing: ${qrKey} (${matchedQR.businessName})`);
+    
+    // Open the associated picture/info
+    openQRInfoPage(matchedQR);
+}
+
+function findQRInRepository(qrData) {
+    // Check if scanned QR data matches any QR code in repository
+    const originalData = qrData.trim();
+    const normalizedData = originalData.toLowerCase().trim();
+    
+    // Log for debugging - you can see what text was scanned
+    console.log('=== FINDING QR IN REPOSITORY ===');
+    console.log('Original QR data:', originalData);
+    console.log('Normalized QR data:', normalizedData);
+    
+    // SIMPLIFIED MATCHING: Match by any occurrence of "1" or "2" or "qr1"/"qr2"
+    // This is more flexible and will catch most variations
+    
+    // Check for QR1 first (more specific matches first)
+    const qr1Matches = [
+        normalizedData.includes('qr1'),
+        normalizedData.includes('qr_code_1'),
+        normalizedData.includes('techstart'),
+        normalizedData === 'qr1',
+        normalizedData === '1',
+        /^1[^0-9]/.test(normalizedData), // Starts with 1
+        /[^0-9]1$/.test(normalizedData), // Ends with 1
+        /[^0-9]1[^0-9]/.test(normalizedData), // Contains standalone 1
+        originalData.includes('QR1'),
+        originalData.includes('QR_CODE_1')
+    ];
+    
+    // Check for QR2
+    const qr2Matches = [
+        normalizedData.includes('qr2'),
+        normalizedData.includes('qr_code_2'),
+        normalizedData.includes('healthtech'),
+        normalizedData === 'qr2',
+        normalizedData === '2',
+        /^2[^0-9]/.test(normalizedData), // Starts with 2
+        /[^0-9]2$/.test(normalizedData), // Ends with 2
+        /[^0-9]2[^0-9]/.test(normalizedData), // Contains standalone 2
+        originalData.includes('QR2'),
+        originalData.includes('QR_CODE_2')
+    ];
+    
+    // If QR2 matches are found, return QR2 (check QR2 first to avoid conflicts)
+    if (qr2Matches.some(match => match === true)) {
+        console.log('✓ MATCHED QR_CODE_2 (QR2)');
+        return qrCodeRepository['QR_CODE_2'];
+    }
+    
+    // If QR1 matches are found, return QR1
+    if (qr1Matches.some(match => match === true)) {
+        console.log('✓ MATCHED QR_CODE_1 (QR1)');
+        return qrCodeRepository['QR_CODE_1'];
+    }
+    
+    // Fallback: Try exact match with repository qrData
+    for (const key in qrCodeRepository) {
+        const qrInfo = qrCodeRepository[key];
+        if (normalizedData === qrInfo.qrData.toLowerCase() || 
+            originalData === qrInfo.qrData ||
+            normalizedData.includes(qrInfo.qrData.toLowerCase()) ||
+            normalizedData.includes(qrInfo.businessName.toLowerCase())) {
+            console.log('✓ MATCHED by repository data:', key);
+            return qrInfo;
+        }
+    }
+    
+    console.log('✗ No match found for QR data:', originalData);
+    console.log('Available QR codes:', Object.keys(qrCodeRepository));
+    console.log('Tip: Make sure your QR code contains "QR1", "QR2", "1", or "2" in the text');
+    
+    // LAST RESORT: If nothing matches, assume first QR code is QR1
+    // This is a fallback - you should update your QR codes to contain identifiable text
+    console.log('⚠️ Using fallback: Assuming first scanned QR is QR1');
+    return qrCodeRepository['QR_CODE_1'];
+}
+
+function openQRInfoPage(qrInfo) {
+    console.log('Opening QR info page for:', qrInfo);
+    
+    // Create and show the info page modal
+    let infoModal = document.getElementById('qrInfoModal');
+    if (!infoModal) {
+        createQRInfoModal();
+        // Wait a bit for DOM to update
+        setTimeout(() => {
+            infoModal = document.getElementById('qrInfoModal');
+            if (infoModal) {
+                populateQRInfoModal(qrInfo, infoModal);
+            }
+        }, 100);
+    } else {
+        populateQRInfoModal(qrInfo, infoModal);
+    }
+}
+
+function populateQRInfoModal(qrInfo, modal) {
+    const img = document.getElementById('qrInfoImage');
+    const businessName = document.getElementById('qrInfoBusinessName');
+    const description = document.getElementById('qrInfoDescription');
+    const saveBtn = document.getElementById('saveQRInfoBtn');
+    const shareBtn = document.getElementById('shareQRInfoBtn');
+    
+    console.log('Populating modal with:', qrInfo);
+    
+    if (!img) {
+        console.error('❌ Image element not found!');
+        return;
+    }
+    if (!businessName) {
+        console.error('❌ Business name element not found!');
+        return;
+    }
+    if (!description) {
+        console.error('❌ Description element not found!');
+        return;
+    }
+    if (!saveBtn) {
+        console.error('❌ Save button not found!');
+        return;
+    }
+    if (!shareBtn) {
+        console.error('❌ Share button not found!');
+        return;
+    }
+    
+    console.log('✅ All elements found, setting data...');
+    
+    // Set the data
+    console.log('Setting image src to:', qrInfo.imageUrl);
+    img.src = qrInfo.imageUrl;
+    img.alt = qrInfo.businessName;
+    
+    // Handle image load error
+    img.onerror = function() {
+        console.error('❌ Image failed to load:', qrInfo.imageUrl);
+        console.error('Make sure the file exists in the root directory');
+        this.src = 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'400\' height=\'300\'%3E%3Crect width=\'400\' height=\'300\' fill=\'%23ddd\'/%3E%3Ctext x=\'50%25\' y=\'50%25\' text-anchor=\'middle\' dy=\'.3em\' fill=\'%23999\'%3EImage not found: ' + qrInfo.imageUrl + '%3C/text%3E%3C/svg%3E';
+    };
+    
+    img.onload = function() {
+        console.log('✅ Image loaded successfully:', qrInfo.imageUrl);
+    };
+    
+    businessName.textContent = qrInfo.businessName;
+    description.textContent = qrInfo.description;
+    
+    console.log('Business name set to:', qrInfo.businessName);
+    console.log('Description set to:', qrInfo.description);
+    
+    // Store current QR info for save/share actions
+    saveBtn.dataset.qrId = qrInfo.id;
+    shareBtn.dataset.qrId = qrInfo.id;
+    
+    // Check if already saved
+    const isSaved = savedLeads.some(lead => lead.qrId === qrInfo.id);
+    if (isSaved) {
+        saveBtn.textContent = '✓ Saved';
+        saveBtn.classList.add('saved');
+    } else {
+        saveBtn.textContent = 'Save';
+        saveBtn.classList.remove('saved');
+    }
+    
+    // Show modal
+    console.log('Showing modal...');
+    modal.classList.add('active');
+    document.body.style.overflow = 'hidden';
+    
+    console.log('✅ Modal should be visible now');
+    console.log('Modal classes:', modal.className);
+}
+
+function showQRScanSuccess(data) {
+    // Show a brief success message
+    const successMsg = document.createElement('div');
+    successMsg.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(20, 20, 35, 0.95);
+        backdrop-filter: blur(20px);
+        color: white;
+        padding: 2rem 3rem;
+        border-radius: 1rem;
+        z-index: 10000;
+        font-size: 1rem;
+        box-shadow: 0 0 50px rgba(139, 92, 246, 0.5);
+        border: 1px solid rgba(139, 92, 246, 0.3);
+        text-align: center;
+        max-width: 400px;
+    `;
+    successMsg.innerHTML = `
+        <div style="font-size: 2rem; margin-bottom: 1rem;">✓</div>
+        <div style="margin-bottom: 0.5rem; font-weight: 600;">QR Code Scanned</div>
+        <div style="color: #A0A0B8; font-size: 0.9rem; word-break: break-all;">${data}</div>
+    `;
+    document.body.appendChild(successMsg);
+    
+    setTimeout(() => {
+        successMsg.style.opacity = '0';
+        successMsg.style.transition = 'opacity 0.3s';
+        setTimeout(() => successMsg.remove(), 300);
+    }, 2000);
+}
+
+function createQRInfoModal() {
+    // Create the QR info modal if it doesn't exist
+    const modal = document.createElement('div');
+    modal.id = 'qrInfoModal';
+    modal.className = 'modal-overlay';
+    modal.innerHTML = `
+        <div class="modal-content qr-info-modal">
+            <button class="modal-close" id="closeQRInfoModal">&times;</button>
+            <div class="qr-info-content">
+                <img id="qrInfoImage" src="" alt="QR Info" class="qr-info-image">
+                <div class="qr-info-details">
+                    <h2 id="qrInfoBusinessName" class="qr-info-business-name"></h2>
+                    <p id="qrInfoDescription" class="qr-info-description"></p>
+                </div>
+                <div class="qr-info-actions">
+                    <button class="save-qr-btn" id="saveQRInfoBtn">Save</button>
+                    <button class="share-qr-btn" id="shareQRInfoBtn">Share Info</button>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    
+    // Add event listeners
+    document.getElementById('closeQRInfoModal').addEventListener('click', () => {
+        modal.classList.remove('active');
+        document.body.style.overflow = '';
+    });
+    
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            modal.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+    });
+    
+    // Save button handler
+    document.getElementById('saveQRInfoBtn').addEventListener('click', handleSaveQRInfo);
+    
+    // Share button handler
+    document.getElementById('shareQRInfoBtn').addEventListener('click', handleShareQRInfo);
+}
+
+function handleSaveQRInfo(e) {
+    const qrId = e.target.dataset.qrId;
+    const qrInfo = qrCodeRepository[qrId];
+    
+    if (!qrInfo) return;
+    
+    // Check if already saved
+    const existingIndex = savedLeads.findIndex(lead => lead.qrId === qrId);
+    
+    if (existingIndex === -1) {
+        // Add to saved leads
+        const savedLead = {
+            qrId: qrId,
+            businessName: qrInfo.businessName,
+            description: qrInfo.description,
+            category: qrInfo.category,
+            imageUrl: qrInfo.imageUrl,
+            savedAt: new Date().toISOString()
+        };
+        savedLeads.push(savedLead);
+        localStorage.setItem('savedLeads', JSON.stringify(savedLeads));
+        
+        e.target.textContent = '✓ Saved';
+        e.target.classList.add('saved');
+        
+        // Update saved leads display
+        updateSavedLeadsDisplay();
+        
+        showNotification('Saved to your leads!', 'success');
+        
+        // After saving, ask if user wants to share
+        setTimeout(() => {
+            askToShareInfo(qrInfo);
+        }, 500);
+    } else {
+        // Remove from saved leads
+        savedLeads.splice(existingIndex, 1);
+        localStorage.setItem('savedLeads', JSON.stringify(savedLeads));
+        
+        e.target.textContent = 'Save';
+        e.target.classList.remove('saved');
+        
+        updateSavedLeadsDisplay();
+        showNotification('Removed from saved leads', 'info');
+    }
+}
+
+function askToShareInfo(qrInfo) {
+    console.log('Asking to share info for:', qrInfo);
+    
+    // Close the QR info modal first if it's open
+    const qrInfoModal = document.getElementById('qrInfoModal');
+    if (qrInfoModal && qrInfoModal.classList.contains('active')) {
+        qrInfoModal.classList.remove('active');
+    }
+    
+    // Show confirmation dialog
+    const shareModal = document.createElement('div');
+    shareModal.id = 'shareInfoModal';
+    shareModal.className = 'modal-overlay';
+    shareModal.style.cssText = 'display: flex; opacity: 1; z-index: 3000;';
+    shareModal.innerHTML = `
+        <div class="modal-content" style="max-width: 400px;">
+            <h2 class="modal-title">Share Info?</h2>
+            <p style="color: var(--text-secondary); margin-bottom: 2rem;">Can I share the info with the business owner?</p>
+            <div style="display: flex; gap: 1rem;">
+                <button class="glow-button" id="confirmShareBtn" style="flex: 1;">Yes</button>
+                <button class="glow-button" id="cancelShareBtn" style="flex: 1; background: rgba(139, 92, 246, 0.2); border: 1px solid var(--primary-purple); color: var(--primary-purple);">No</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(shareModal);
+    
+    // Add active class for animation
+    setTimeout(() => {
+        shareModal.classList.add('active');
+    }, 10);
+    
+    document.getElementById('confirmShareBtn').addEventListener('click', () => {
+        console.log('User clicked Yes to share');
+        shareModal.remove();
+        document.body.style.overflow = '';
+        
+        // Proceed with sharing
+        shareQRInfoToOwner(qrInfo);
+    });
+    
+    document.getElementById('cancelShareBtn').addEventListener('click', () => {
+        console.log('User clicked No to share');
+        shareModal.remove();
+        document.body.style.overflow = '';
+    });
+    
+    shareModal.addEventListener('click', (e) => {
+        if (e.target === shareModal) {
+            shareModal.remove();
+            document.body.style.overflow = '';
+        }
+    });
+    
+    document.body.style.overflow = 'hidden';
+    
+    console.log('Share modal should be visible now');
+}
+
+function shareQRInfoToOwner(qrInfo) {
+    console.log('Sharing QR info to owner:', qrInfo);
+    console.log('sharmaJiAdded status:', sharmaJiAdded);
+    
+    // Check if sharma ji has already been added
+    if (sharmaJiAdded) {
+        // Already added, just show message
+        console.log('sharma ji already added, just showing message');
+        showNotification('Sent to owner', 'success');
+        return;
+    }
+    
+    // First time - Add to owner mode leads with specific details
+    const sharedLead = {
+        name: 'sharma ji',
+        email: 'sharmaji@gmail.com',
+        interests: ['Food & Beverages', 'Finance & FinTech'],
+        time: 'Just now',
+        qrId: qrInfo.id,
+        businessName: qrInfo.businessName,
+        sharedAt: new Date().toISOString()
+    };
+    
+    console.log('Adding lead to mockLeads:', sharedLead);
+    
+    // Add to mock leads at the END (last position)
+    mockLeads.push(sharedLead);
+    
+    // Mark as added
+    sharmaJiAdded = true;
+    localStorage.setItem('sharmaJiAdded', JSON.stringify(true));
+    
+    console.log('Total leads now:', mockLeads.length);
+    console.log('Last lead:', mockLeads[mockLeads.length - 1]);
+    
+    // Always update leads table (even if not in owner mode, it will update when user switches)
+    const leadsTableBody = document.getElementById('leadsTableBody');
+    if (leadsTableBody) {
+        populateLeadsTable();
+        console.log('Leads table updated');
+    } else {
+        console.log('Leads table body not found');
+    }
+    
+    showNotification('Info shared with business owner!', 'success');
+}
+
+function handleShareQRInfo(e) {
+    const qrId = e.target.dataset.qrId;
+    const qrInfo = qrCodeRepository[qrId];
+    
+    if (!qrInfo) return;
+    
+    // Show confirmation dialog
+    const shareModal = document.createElement('div');
+    shareModal.className = 'modal-overlay';
+    shareModal.style.display = 'flex';
+    shareModal.innerHTML = `
+        <div class="modal-content" style="max-width: 400px;">
+            <h2 class="modal-title">Share Info?</h2>
+            <p style="color: var(--text-secondary); margin-bottom: 2rem;">Do you want to share this info with the business owner?</p>
+            <div style="display: flex; gap: 1rem;">
+                <button class="glow-button" id="confirmShare" style="flex: 1;">Yes, Share</button>
+                <button class="glow-button" id="cancelShare" style="flex: 1; background: rgba(139, 92, 246, 0.2); border: 1px solid var(--primary-purple); color: var(--primary-purple);">Cancel</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(shareModal);
+    
+    document.getElementById('confirmShare').addEventListener('click', () => {
+        shareModal.remove();
+        document.body.style.overflow = '';
+        
+        // Proceed with sharing
+        shareQRInfoToOwner(qrInfo);
+    });
+    
+    document.getElementById('cancelShare').addEventListener('click', () => {
+        shareModal.remove();
+        document.body.style.overflow = '';
+    });
+    
+    shareModal.addEventListener('click', (e) => {
+        if (e.target === shareModal) {
+            shareModal.remove();
+            document.body.style.overflow = '';
+        }
+    });
+    
+    document.body.style.overflow = 'hidden';
+}
+
+function showNotification(message, type = 'info') {
+    const notification = document.createElement('div');
+    notification.className = `notification notification-${type}`;
+    notification.textContent = message;
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.classList.add('show');
+    }, 10);
+    
+    setTimeout(() => {
+        notification.classList.remove('show');
+        setTimeout(() => notification.remove(), 300);
+    }, 3000);
+}
+
+function updateSavedLeadsDisplay() {
+    const savedLeadsGrid = document.getElementById('savedLeadsGrid');
+    const noSavedLeads = document.getElementById('noSavedLeads');
+    
+    if (!savedLeadsGrid) return;
+    
+    savedLeadsGrid.innerHTML = '';
+    
+    if (savedLeads.length === 0) {
+        if (noSavedLeads) {
+            noSavedLeads.style.display = 'block';
+        }
+        return;
+    }
+    
+    if (noSavedLeads) {
+        noSavedLeads.style.display = 'none';
+    }
+    
+    savedLeads.forEach(lead => {
+        const leadCard = document.createElement('div');
+        leadCard.className = 'saved-lead-card';
+        leadCard.innerHTML = `
+            <div class="saved-lead-image">
+                <img src="${lead.imageUrl}" alt="${lead.businessName}" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'200\' height=\'200\'%3E%3Crect width=\'200\' height=\'200\' fill=\'%23ddd\'/%3E%3Ctext x=\'50%25\' y=\'50%25\' text-anchor=\'middle\' dy=\'.3em\' fill=\'%23999\'%3ENo Image%3C/text%3E%3C/svg%3E'">
+            </div>
+            <div class="saved-lead-info">
+                <h3 class="saved-lead-name">${lead.businessName}</h3>
+                <p class="saved-lead-description">${lead.description}</p>
+                <div class="saved-lead-category">${lead.category}</div>
+            </div>
+            <button class="remove-saved-lead-btn" data-qr-id="${lead.qrId}">×</button>
+        `;
+        
+        const removeBtn = leadCard.querySelector('.remove-saved-lead-btn');
+        removeBtn.addEventListener('click', () => {
+            const index = savedLeads.findIndex(l => l.qrId === lead.qrId);
+            if (index !== -1) {
+                savedLeads.splice(index, 1);
+                localStorage.setItem('savedLeads', JSON.stringify(savedLeads));
+                updateSavedLeadsDisplay();
+                showNotification('Removed from saved leads', 'info');
+            }
+        });
+        
+        savedLeadsGrid.appendChild(leadCard);
+    });
+}
+
+// Initialize saved leads display on page load
+document.addEventListener('DOMContentLoaded', () => {
+    updateSavedLeadsDisplay();
+});
+
+function showCameraError() {
+    // Create a subtle error notification (optional - can be removed if not needed)
+    const errorMsg = document.createElement('div');
+    errorMsg.style.cssText = `
+        position: fixed;
+        top: 100px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(239, 68, 68, 0.9);
+        color: white;
+        padding: 1rem 2rem;
+        border-radius: 0.5rem;
+        z-index: 10000;
+        font-size: 0.9rem;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    `;
+    errorMsg.textContent = 'Camera access denied. Please enable camera permissions.';
+    document.body.appendChild(errorMsg);
+    
+    setTimeout(() => {
+        errorMsg.style.opacity = '0';
+        errorMsg.style.transition = 'opacity 0.3s';
+        setTimeout(() => errorMsg.remove(), 300);
+    }, 3000);
+}
 
 closeModal.addEventListener('click', () => {
     qrModal.classList.remove('active');
@@ -469,12 +1167,19 @@ function populateLeadsTable(filter = 'all') {
     let filteredLeads = [...mockLeads];
     
     if (filter === 'today') {
-        filteredLeads = mockLeads.filter(lead => lead.time.includes('hour'));
+        filteredLeads = mockLeads.filter(lead => 
+            lead.time.includes('hour') || lead.time === 'Just now'
+        );
     } else if (filter === 'week') {
         filteredLeads = mockLeads.filter(lead => 
-            lead.time.includes('hour') || lead.time.includes('day') && parseInt(lead.time) <= 7
+            lead.time.includes('hour') || lead.time === 'Just now' || 
+            (lead.time.includes('day') && parseInt(lead.time) <= 7)
         );
     }
+    
+    console.log('Populating leads table with filter:', filter);
+    console.log('Total leads:', mockLeads.length);
+    console.log('Filtered leads:', filteredLeads.length);
     
     filteredLeads.forEach(lead => {
         const row = document.createElement('tr');
