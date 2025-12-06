@@ -6,8 +6,8 @@ const qrCodeRepository = {
     // QR Code 1 - When QR1.png is scanned, it should contain one of these texts
     'QR_CODE_1': {
         id: 'QR_CODE_1',
-        businessName: 'TechStart Solutions', // You can edit this later
-        qrData: 'QR1', // The text encoded in QR1.png - can be: "QR1", "QR_CODE_1", "TechStart Solutions", or any text containing "qr1"
+        businessName: 'grow stock broker', // You can edit this later
+        qrData: 'QR1', // The text encoded in QR1.png - can be: "QR1", "QR_CODE_1", "grow stock broker", or any text containing "qr1"
         imageUrl: 'image1.jpeg', // Local image file - shows when QR1 is scanned
         description: 'Leading technology solutions provider', // You can edit this later
         category: 'Technology' // You can edit this later
@@ -15,8 +15,8 @@ const qrCodeRepository = {
     // QR Code 2 - When QR2.png is scanned, it should contain one of these texts
     'QR_CODE_2': {
         id: 'QR_CODE_2',
-        businessName: 'HealthTech Innovations', // You can edit this later
-        qrData: 'QR2', // The text encoded in QR2.png - can be: "QR2", "QR_CODE_2", "HealthTech Innovations", or any text containing "qr2"
+        businessName: 'campusOS', // You can edit this later
+        qrData: 'QR2', // The text encoded in QR2.png - can be: "QR2", "QR_CODE_2", "campusOS", or any text containing "qr2"
         imageUrl: 'image2.jpeg', // Local image file - shows when QR2 is scanned
         description: 'Revolutionary health monitoring devices', // You can edit this later
         category: 'Health & Wellness' // You can edit this later
@@ -30,7 +30,64 @@ let savedLeads = JSON.parse(localStorage.getItem('savedLeads')) || [];
 let scanCount = 0;
 
 // Track if sharma ji has already been added to owner leads
-let sharmaJiAdded = JSON.parse(localStorage.getItem('sharmaJiAdded')) || false;
+// Only restore from localStorage if it was actually saved by user action
+let sharmaJiAdded = false;
+let firstCommentAdded = false;
+let firstComment = null;
+
+// Check localStorage but only use it if it's valid (not default/empty data)
+const savedSharmaJiFlag = localStorage.getItem('sharmaJiAdded');
+const savedSharmaJiData = localStorage.getItem('sharmaJiLead');
+
+// Only restore sharma ji if we have BOTH flag AND valid data
+if (savedSharmaJiFlag === 'true' && savedSharmaJiData) {
+    try {
+        const parsed = JSON.parse(savedSharmaJiData);
+        // Verify it's actual saved data, not default
+        if (parsed && parsed.name === 'sharma ji' && parsed.email === 'sharmaji@gmail.com' && parsed.businessName) {
+            sharmaJiAdded = true;
+        } else {
+            // Invalid data, clear it
+            localStorage.removeItem('sharmaJiAdded');
+            localStorage.removeItem('sharmaJiLead');
+        }
+    } catch (e) {
+        // Invalid data, clear it
+        localStorage.removeItem('sharmaJiAdded');
+        localStorage.removeItem('sharmaJiLead');
+    }
+} else {
+    // No valid data, ensure flags are cleared
+    localStorage.removeItem('sharmaJiAdded');
+    localStorage.removeItem('sharmaJiLead');
+}
+
+// Check for comment - only restore if valid
+const savedCommentFlag = localStorage.getItem('firstCommentAdded');
+const savedCommentData = localStorage.getItem('firstComment');
+
+if (savedCommentFlag === 'true' && savedCommentData) {
+    try {
+        const parsed = JSON.parse(savedCommentData);
+        // Verify it's actual saved comment, not default
+        if (parsed && parsed.comment && parsed.businessName && parsed.comment.trim().length > 0) {
+            firstCommentAdded = true;
+            firstComment = parsed;
+        } else {
+            // Invalid comment, clear it
+            localStorage.removeItem('firstCommentAdded');
+            localStorage.removeItem('firstComment');
+        }
+    } catch (e) {
+        // Invalid comment, clear it
+        localStorage.removeItem('firstCommentAdded');
+        localStorage.removeItem('firstComment');
+    }
+} else {
+    // No valid comment, ensure flags are cleared
+    localStorage.removeItem('firstCommentAdded');
+    localStorage.removeItem('firstComment');
+}
 
 // ============================================
 // MOCK DATA - Expanded Stalls (10+ per domain)
@@ -161,6 +218,21 @@ const mockLeads = [
     { name: "Christopher Lee", email: "c.lee@email.com", interests: ["Art & Design"], time: "5 days ago" }
 ];
 
+// Restore sharma ji to mockLeads array ONLY if it was actually saved
+if (sharmaJiAdded && savedSharmaJiData) {
+    try {
+        const savedSharmaJi = JSON.parse(savedSharmaJiData);
+        // Check if sharma ji is already in the array (to avoid duplicates)
+        const sharmaJiExists = mockLeads.some(lead => lead.name === 'sharma ji' && lead.email === 'sharmaji@gmail.com');
+        if (!sharmaJiExists && savedSharmaJi && savedSharmaJi.name === 'sharma ji') {
+            mockLeads.push(savedSharmaJi);
+            console.log('✅ Restored sharma ji to mockLeads (from valid saved data)');
+        }
+    } catch (e) {
+        console.error('Error restoring sharma ji:', e);
+    }
+}
+
 // ============================================
 // STATE MANAGEMENT
 // ============================================
@@ -200,6 +272,13 @@ function switchMode(mode) {
         userModeBtn.classList.remove('active');
         ownerMode.classList.add('active');
         userMode.classList.remove('active');
+        // Update comments display when switching to owner mode
+        updateCommentsDisplay();
+        // Refresh leads table when switching to owner mode
+        // Use setTimeout to ensure DOM is ready
+        setTimeout(() => {
+            populateLeadsTable();
+        }, 50);
     }
 }
 
@@ -308,10 +387,22 @@ function updateStallsDisplay() {
     
     // Sort stalls
     if (currentSort === 'popularity') {
+        // Sort by likes (descending - highest likes first)
         filteredStalls.sort((a, b) => {
-            const likesA = stallLikes[a.id] || a.likes;
-            const likesB = stallLikes[b.id] || b.likes;
-            return likesB - likesA;
+            const likesA = stallLikes[a.id] || a.likes || 0;
+            const likesB = stallLikes[b.id] || b.likes || 0;
+            return likesB - likesA; // Higher likes come first
+        });
+    } else if (currentSort === 'relevance') {
+        // For relevance, also consider likes as a factor (higher likes = more relevant)
+        filteredStalls.sort((a, b) => {
+            const likesA = stallLikes[a.id] || a.likes || 0;
+            const likesB = stallLikes[b.id] || b.likes || 0;
+            // Sort by likes first, then by original order
+            if (likesB !== likesA) {
+                return likesB - likesA; // Higher likes come first
+            }
+            return 0; // Maintain original order if likes are equal
         });
     }
     
@@ -380,15 +471,19 @@ function createStallCard(stall) {
             upvoteBtn.classList.add('upvoted');
         }
         
+        // Update the like count display
         upvoteBtn.querySelector('.upvote-count').textContent = stallLikes[stallId];
+        
+        // Save to localStorage
         localStorage.setItem('upvotedStalls', JSON.stringify(upvotedStalls));
         localStorage.setItem('stallLikes', JSON.stringify(stallLikes));
+        
+        // Update heat map
         updateHeatMap();
         
-        // Re-sort if sorting by popularity
-        if (currentSort === 'popularity') {
-            updateStallsDisplay();
-        }
+        // Always re-sort and update display to show items with more likes higher
+        // This ensures the list updates immediately when likes change
+        updateStallsDisplay();
     });
     
     // Add comment functionality
@@ -854,9 +949,13 @@ function askToShareInfo(qrInfo) {
     shareModal.className = 'modal-overlay';
     shareModal.style.cssText = 'display: flex; opacity: 1; z-index: 3000;';
     shareModal.innerHTML = `
-        <div class="modal-content" style="max-width: 400px;">
+        <div class="modal-content" style="max-width: 500px;">
             <h2 class="modal-title">Share Info?</h2>
-            <p style="color: var(--text-secondary); margin-bottom: 2rem;">Can I share the info with the business owner?</p>
+            <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">Can I share the info with the business owner?</p>
+            <div class="form-group" style="margin-bottom: 1.5rem;">
+                <label for="shareComment" style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: var(--text-primary);">Add a Comment (Optional)</label>
+                <textarea id="shareComment" placeholder="Write your comment here..." style="width: 100%; padding: 1rem; background: rgba(10, 10, 15, 0.6); border: 1px solid var(--card-border); border-radius: 0.75rem; color: var(--text-primary); font-size: 1rem; font-family: inherit; resize: vertical; min-height: 100px;"></textarea>
+            </div>
             <div style="display: flex; gap: 1rem;">
                 <button class="glow-button" id="confirmShareBtn" style="flex: 1;">Yes</button>
                 <button class="glow-button" id="cancelShareBtn" style="flex: 1; background: rgba(139, 92, 246, 0.2); border: 1px solid var(--primary-purple); color: var(--primary-purple);">No</button>
@@ -872,11 +971,12 @@ function askToShareInfo(qrInfo) {
     
     document.getElementById('confirmShareBtn').addEventListener('click', () => {
         console.log('User clicked Yes to share');
+        const commentText = document.getElementById('shareComment').value.trim();
         shareModal.remove();
         document.body.style.overflow = '';
         
-        // Proceed with sharing
-        shareQRInfoToOwner(qrInfo);
+        // Proceed with sharing (pass comment if provided)
+        shareQRInfoToOwner(qrInfo, commentText);
     });
     
     document.getElementById('cancelShareBtn').addEventListener('click', () => {
@@ -897,51 +997,103 @@ function askToShareInfo(qrInfo) {
     console.log('Share modal should be visible now');
 }
 
-function shareQRInfoToOwner(qrInfo) {
-    console.log('Sharing QR info to owner:', qrInfo);
-    console.log('sharmaJiAdded status:', sharmaJiAdded);
+function shareQRInfoToOwner(qrInfo, commentText = '') {
+    console.log('=== SHARING QR INFO TO OWNER ===');
+    console.log('QR Info:', qrInfo);
+    console.log('sharmaJiAdded:', sharmaJiAdded);
+    console.log('firstCommentAdded:', firstCommentAdded);
+    console.log('Comment provided:', commentText);
     
-    // Check if sharma ji has already been added
-    if (sharmaJiAdded) {
-        // Already added, just show message
-        console.log('sharma ji already added, just showing message');
-        showNotification('Sent to owner', 'success');
-        return;
+    let isFirstComment = false;
+    let isFirstShare = !sharmaJiAdded;
+    
+    // Handle comment FIRST (independent of sharma ji)
+    if (commentText) {
+        if (!firstCommentAdded) {
+            // First comment - store it
+            console.log('Storing first comment');
+            firstComment = {
+                comment: commentText,
+                businessName: qrInfo.businessName,
+                timestamp: new Date().toISOString()
+            };
+            firstCommentAdded = true;
+            isFirstComment = true;
+            localStorage.setItem('firstComment', JSON.stringify(firstComment));
+            localStorage.setItem('firstCommentAdded', JSON.stringify(true));
+            
+            // Update comments display if in owner mode
+            if (ownerMode && ownerMode.classList.contains('active')) {
+                updateCommentsDisplay();
+            }
+        } else {
+            // Subsequent comments - just show message, don't store
+            console.log('Comment received but not stored (first comment already exists)');
+        }
     }
     
-    // First time - Add to owner mode leads with specific details
-    const sharedLead = {
-        name: 'sharma ji',
-        email: 'sharmaji@gmail.com',
-        interests: ['Food & Beverages', 'Finance & FinTech'],
-        time: 'Just now',
-        qrId: qrInfo.id,
-        businessName: qrInfo.businessName,
-        sharedAt: new Date().toISOString()
-    };
-    
-    console.log('Adding lead to mockLeads:', sharedLead);
-    
-    // Add to mock leads at the END (last position)
-    mockLeads.push(sharedLead);
-    
-    // Mark as added
-    sharmaJiAdded = true;
-    localStorage.setItem('sharmaJiAdded', JSON.stringify(true));
-    
-    console.log('Total leads now:', mockLeads.length);
-    console.log('Last lead:', mockLeads[mockLeads.length - 1]);
-    
-    // Always update leads table (even if not in owner mode, it will update when user switches)
-    const leadsTableBody = document.getElementById('leadsTableBody');
-    if (leadsTableBody) {
-        populateLeadsTable();
-        console.log('Leads table updated');
+    // Handle sharma ji lead (independent of comment)
+    if (!sharmaJiAdded) {
+        // First time - Add to owner mode leads with specific details
+        console.log('Adding sharma ji to leads list');
+        const sharedLead = {
+            name: 'sharma ji',
+            email: 'sharmaji@gmail.com',
+            interests: ['Food & Beverages', 'Finance & FinTech'],
+            time: 'Just now',
+            qrId: qrInfo.id,
+            businessName: qrInfo.businessName,
+            sharedAt: new Date().toISOString()
+        };
+        
+        // Check if sharma ji already exists (to avoid duplicates)
+        const sharmaJiExists = mockLeads.some(lead => lead.name === 'sharma ji' && lead.email === 'sharmaji@gmail.com');
+        if (!sharmaJiExists) {
+            // Add to mock leads at the END (last position)
+            mockLeads.push(sharedLead);
+            
+            console.log('✅ Added sharma ji to mockLeads');
+            console.log('Total leads now:', mockLeads.length);
+            console.log('Last lead:', mockLeads[mockLeads.length - 1]);
+            console.log('All leads:', mockLeads);
+        } else {
+            console.log('⚠️ sharma ji already exists in mockLeads, skipping duplicate');
+        }
+        
+        // Mark as added and save the lead data
+        sharmaJiAdded = true;
+        localStorage.setItem('sharmaJiAdded', JSON.stringify(true));
+        localStorage.setItem('sharmaJiLead', JSON.stringify(sharedLead));
+        
+        // Always update leads table - force update
+        // Get the table body element (it might not be in DOM yet if not in owner mode)
+        const tableBody = document.getElementById('leadsTableBody');
+        if (tableBody) {
+            console.log('Updating leads table...');
+            // Use the global leadsTableBody if available, otherwise use the one we just got
+            populateLeadsTable('all'); // Force refresh with 'all' filter
+            console.log('✅ Leads table updated');
+        } else {
+            console.warn('⚠️ Leads table body not found in DOM (might not be in owner mode yet)');
+            console.log('sharma ji will appear when you switch to owner mode');
+        }
+        
+        // Also check if we need to update when switching to owner mode
+        console.log('sharmaJiAdded flag set to:', sharmaJiAdded);
     } else {
-        console.log('Leads table body not found');
+        console.log('sharma ji already added, skipping');
     }
     
-    showNotification('Info shared with business owner!', 'success');
+    // Show appropriate notification
+    if (isFirstShare && isFirstComment) {
+        showNotification('Info and comment shared with business owner!', 'success');
+    } else if (isFirstShare && !commentText) {
+        showNotification('Info shared with business owner!', 'success');
+    } else if (!isFirstShare && commentText) {
+        showNotification('Comment sent to owner', 'success');
+    } else {
+        showNotification('Sent to owner', 'success');
+    }
 }
 
 function handleShareQRInfo(e) {
@@ -1248,7 +1400,14 @@ filterButtons.forEach(btn => {
 });
 
 function populateLeadsTable(filter = 'all') {
-    leadsTableBody.innerHTML = '';
+    // Get the table body element (in case it wasn't available when function was defined)
+    const tableBody = document.getElementById('leadsTableBody');
+    if (!tableBody) {
+        console.error('Cannot populate leads table - leadsTableBody element not found');
+        return;
+    }
+    
+    tableBody.innerHTML = '';
     
     let filteredLeads = [...mockLeads];
     
@@ -1263,11 +1422,21 @@ function populateLeadsTable(filter = 'all') {
         );
     }
     
-    console.log('Populating leads table with filter:', filter);
-    console.log('Total leads:', mockLeads.length);
-    console.log('Filtered leads:', filteredLeads.length);
+    console.log('=== POPULATING LEADS TABLE ===');
+    console.log('Filter:', filter);
+    console.log('Total leads in mockLeads:', mockLeads.length);
+    console.log('Filtered leads count:', filteredLeads.length);
+    console.log('All leads:', mockLeads);
+    console.log('Filtered leads:', filteredLeads);
     
-    filteredLeads.forEach(lead => {
+    if (filteredLeads.length === 0) {
+        console.log('No leads to display');
+        tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 2rem; color: var(--text-secondary);">No leads found</td></tr>';
+        return;
+    }
+    
+    filteredLeads.forEach((lead, index) => {
+        console.log(`Adding lead ${index + 1}:`, lead);
         const row = document.createElement('tr');
         
         const interestsHTML = lead.interests.map(interest => 
@@ -1286,12 +1455,54 @@ function populateLeadsTable(filter = 'all') {
             <td><button class="action-btn">Contact</button></td>
         `;
         
-        leadsTableBody.appendChild(row);
+        tableBody.appendChild(row);
     });
+    
+    console.log(`✅ Successfully added ${filteredLeads.length} leads to table`);
 }
 
-// Initialize leads table
+// Initialize leads table after DOM is ready
+// Use setTimeout to ensure DOM is fully loaded
+setTimeout(() => {
 populateLeadsTable();
+}, 100);
+
+// ============================================
+// COMMENTS DISPLAY (OWNER MODE)
+// ============================================
+
+function updateCommentsDisplay() {
+    const commentsContainer = document.getElementById('commentsContainer');
+    const noComments = document.getElementById('noComments');
+    
+    if (!commentsContainer) return;
+    
+    commentsContainer.innerHTML = '';
+    
+    if (!firstComment || !firstCommentAdded) {
+        if (noComments) {
+            noComments.style.display = 'block';
+        }
+        return;
+    }
+    
+    if (noComments) {
+        noComments.style.display = 'none';
+    }
+    
+    // Display the first comment
+    const commentCard = document.createElement('div');
+    commentCard.className = 'comment-card';
+    const commentDate = new Date(firstComment.timestamp).toLocaleDateString();
+    commentCard.innerHTML = `
+        <div class="comment-header">
+            <h3 class="comment-business-name">${firstComment.businessName}</h3>
+            <span class="comment-date">${commentDate}</span>
+        </div>
+        <p class="comment-text">${firstComment.comment}</p>
+    `;
+    commentsContainer.appendChild(commentCard);
+}
 
 // ============================================
 // KEYBOARD SHORTCUTS
